@@ -1,29 +1,32 @@
----
 name: Docker
-on:
-  build_push:
-    branches: master
 
+on:
+  push:
+    branches: master
 env:
   IMAGE_NAME: ooklaserver
 
 jobs:
-  build_push:
+  test:
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build Test
+        run: docker build -f Dockerfile .
+  push:
+    needs: [test]
     name: Publish to Docker Hub
     runs-on: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v2
-
       - name: Build image
-        run:
-          - docker build -f Dockerfile -t ${{ secrets.hub_user }}/$IMAGE_NAME:$GITHUB_SHA .
-          - docker tag ${{ secrets.hub_user }}/$IMAGE_NAME:$GITHUB_SHA ${{ secrets.hub_user }}/$IMAGE_NAME:latest
-
+        run: |
+          docker build -f Dockerfile -t ${{ secrets.hub_user }}/$IMAGE_NAME:$GITHUB_SHA .
+          docker build tag ${{ secrets.hub_user }}/$IMAGE_NAME:$GITHUB_SHA ${{ secrets.hub_user }}/$IMAGE_NAME:latest
+          docker images
       - name: Login to Docker Hub
         run: echo "${{ secrets.hub_token  }}" | docker login -u ${{ secrets.hub_user }} --password-stdin
-
       - name: Push Image to Docker Hub
-        run:
-          - docker images
-          - docker push ${{ secrets.hub_user }}/$IMAGE_NAME:$GITHUB_SHA
-          - docker push ${{ secrets.hub_user }}/$IMAGE_NAME:latest
+        run: |
+          docker push ${{ secrets.hub_user }}/$IMAGE_NAME:$GITHUB_SHA
+          docker push ${{ secrets.hub_user }}/$IMAGE_NAME:latest
